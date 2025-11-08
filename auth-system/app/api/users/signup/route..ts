@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
 
     await newUser.save();
 
+    console.log(newUser);
+
     return NextResponse.json(
       {
         message: "User created successfully",
