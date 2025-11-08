@@ -79,7 +79,7 @@ export default function ProfilePage() {
                 <span className="font-mono text-sm bg-white px-3 py-2 rounded-lg border border-indigo-200 group-hover:border-indigo-300 transition-colors">
                   {data}
                 </span>
-                <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                <ExternalLink className="w-4 h-4 shrink-0" />
               </Link>
             )}
           </div>
