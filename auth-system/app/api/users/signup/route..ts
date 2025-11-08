@@ -13,14 +13,34 @@ export async function POST(request: NextRequest) {
 
     // check if user exists or not
     const user = await User.findOne({ email });
-    if(!user){
-        return NextResponse.json({ error: "User already exists" }, { status: 400 });
+    if (!user) {
+      return NextResponse.json(
+        { error: "User already exists" },
+        { status: 400 }
+      );
     }
 
     // hash password
     const salt = await bcryptjs.genSalt(10);
     const hashedPassword = await bcryptjs.hash(password, salt);
-    
+
+    // create user
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+    });
+
+    await newUser.save();
+
+    return NextResponse.json(
+      {
+        message: "User created successfully",
+        success: true,
+        newUser,
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
