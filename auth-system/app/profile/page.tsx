@@ -26,6 +26,7 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       const res = await axios.get("/api/users/me");
+      // console.log(res);
       console.log(res.data);
       setData(res.data.data._id);
       toast.success("User details loaded");
