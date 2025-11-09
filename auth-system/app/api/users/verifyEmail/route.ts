@@ -18,6 +18,8 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Invalid Token" }, { status: 400 });
     }
+    console.log(user);
+    user.isVerified = true;
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
