@@ -2,9 +2,16 @@ import nodemailer from "nodemailer";
 import User from "../models/userModel";
 import bcryptjs from "bcryptjs";
 
-export const sendEmail = async ({ email, emailType, userId }: any) => {
+interface SendEmailParams {
+  email: string;
+  emailType: "VERIFY" | "RESET";
+  userId: string;
+}
+
+export const sendEmail = async ({ email, emailType, userId }: SendEmailParams) => {
   try {
-    // create a hased token
+    if (!userId) throw new Error("Missing userId for email sending");
+
     const hashedToken = await bcryptjs.hash(userId.toString(), 10);
 
     if (emailType === "VERIFY") {
@@ -19,35 +26,28 @@ export const sendEmail = async ({ email, emailType, userId }: any) => {
       });
     }
 
-    var transport = nodemailer.createTransport({
+    const transport = nodemailer.createTransport({
       host: "sandbox.smtp.mailtrap.io",
       port: 2525,
       auth: {
         user: process.env.NODE_MAILER_USER,
-        pass: process.env.NODE_MAILER_PASWORD,
-        //TODO: add these credentials to .env file
+        pass: process.env.NODE_MAILER_PASSWORD, // ✅ fixed name
       },
     });
 
     const mailOptions = {
       from: "virendraraut6021@gmail.com",
       to: email,
-      subject:
-        emailType === "VERIFY" ? "Verify your email" : "Reset your password",
-      html: `<p>Click <a href="${
-        process.env.DOMAIN
-      }/verifyemail?token=${hashedToken}">here</a> to ${
+      subject: emailType === "VERIFY" ? "Verify your email" : "Reset your password",
+      html: `<p>Click <a href="${process.env.DOMAIN}/verifyemail?token=${hashedToken}">here</a> to ${
         emailType === "VERIFY" ? "verify your email" : "reset your password"
-      }
-            or copy and paste the link below in your browser. <br> ${
-              process.env.DOMAIN
-            }/verifyemail?token=${hashedToken}
-            </p>`,
+      } or copy this link: ${process.env.DOMAIN}/verifyemail?token=${hashedToken}</p>`,
     };
 
     const mailresponse = await transport.sendMail(mailOptions);
     return mailresponse;
   } catch (error: any) {
+    console.error("❌ Email sending error:", error);
     throw new Error(error.message);
   }
 };
