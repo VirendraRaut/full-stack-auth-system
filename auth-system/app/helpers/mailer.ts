@@ -27,13 +27,15 @@ export const sendEmail = async ({ email, emailType, userId }: SendEmailParams) =
     }
 
     const transport = nodemailer.createTransport({
-      host: "sandbox.smtp.mailtrap.io",
-      port: 2525,
-      auth: {
-        user: process.env.NODE_MAILER_USER,
-        pass: process.env.NODE_MAILER_PASSWORD, // ✅ fixed name
-      },
-    });
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true, // true for port 465
+        auth: {
+          user: process.env.NODE_MAILER_USER,
+          pass: process.env.NODE_MAILER_PASSWORD,
+        },
+      });
+      
 
     const mailOptions = {
       from: "virendraraut6021@gmail.com",
