@@ -53,67 +53,70 @@
 //     throw new Error(error.message);
 //   }
 // };
+// app/helpers/mailer.ts
 import nodemailer from "nodemailer";
-import User from "../models/userModel"; // ✅ use correct import path
+import User from "@/app/models/userModel";
 import bcryptjs from "bcryptjs";
 
-interface SendEmailParams {
+interface SendOtpParams {
   email: string;
-  emailType: "VERIFY" | "RESET";
   userId: string;
+  otpLength?: number;
+  ttlMinutes?: number;
 }
 
-export const sendEmail = async ({ email, emailType, userId }: SendEmailParams) => {
+export const sendOtpToEmail = async ({
+  email,
+  userId,
+  otpLength = 6,
+  ttlMinutes = 10,
+}: SendOtpParams) => {
   try {
-    if (!userId) throw new Error("Missing userId for email sending");
+    if (!userId) throw new Error("Missing userId for sending OTP");
 
-    const hashedToken = await bcryptjs.hash(userId.toString(), 10);
+    // generate numeric OTP (e.g. 6 digits)
+    const otp = Math.floor(
+      Math.pow(10, otpLength - 1) + Math.random() * 9 * Math.pow(10, otpLength - 1)
+    )
+      .toString()
+      .slice(0, otpLength);
 
-    if (emailType === "VERIFY") {
-      await User.findByIdAndUpdate(userId, {
-        verifyToken: hashedToken,
-        verifyTokenExpiry: Date.now() + 3600000, // 1 hour
-      });
-    } else if (emailType === "RESET") {
-      await User.findByIdAndUpdate(userId, {
-        forgotPasswordToken: hashedToken,
-        forgotPasswordTokenExpiry: Date.now() + 3600000, // 1 hour
-      });
-    }
+    // hash OTP before storing
+    const hashedOtp = await bcryptjs.hash(otp, 10);
 
+    // save hashed OTP & expiry in user doc
+    await User.findByIdAndUpdate(userId, {
+      forgotPasswordToken: hashedOtp,
+      forgotPasswordTokenExpiry: Date.now() + ttlMinutes * 60 * 1000,
+    });
+
+    // create transporter (Gmail)
     const transporter = nodemailer.createTransport({
-      service: "gmail", // simpler + works automatically with port 465 or 587
+      service: "gmail",
       auth: {
         user: process.env.NODE_MAILER_USER,
         pass: process.env.NODE_MAILER_PASSWORD,
       },
     });
 
-    // ✅ Use correct link based on type
-    const link =
-      emailType === "VERIFY"
-        ? `${process.env.DOMAIN}/verifyemail?token=${hashedToken}`
-        : `${process.env.DOMAIN}/resetpassword?token=${hashedToken}`;
-
     const mailOptions = {
       from: process.env.NODE_MAILER_USER,
       to: email,
-      subject: emailType === "VERIFY" ? "Verify your email" : "Reset your password",
+      subject: "Your password reset OTP",
       html: `
-        <p>Click 
-          <a href="${link}" target="_blank">here</a> to ${
-        emailType === "VERIFY" ? "verify your email" : "reset your password"
-      }.
-        </p>
-        <p>Or copy this link: ${link}</p>
-        <p>This link will expire in 1 hour.</p>
+        <p>Use the following OTP to reset your password:</p>
+        <h2 style="letter-spacing:4px">${otp}</h2>
+        <p>This OTP is valid for ${ttlMinutes} minutes.</p>
       `,
     };
 
     const mailResponse = await transporter.sendMail(mailOptions);
-    return mailResponse;
+
+    // return minimal success info (do NOT return otp in production logs)
+    return { ok: true, info: mailResponse };
   } catch (error: any) {
-    console.error("❌ Email sending error:", error);
-    throw new Error(error.message);
+    console.error("❌ sendOtpToEmail error:", error);
+    throw new Error(error.message || "Failed to send OTP");
   }
 };
+
